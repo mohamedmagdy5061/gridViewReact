@@ -56,6 +56,13 @@ const TableHeader = props => {
             </TableSortLabel>
           </TableCell>
         ))}
+        {listModel.actions.isUpdate && (
+          <TableCell padding="checkbox" />
+        )}
+        {listModel.actions.isView && (
+          <TableCell padding="checkbox" />
+        )}
+
       </TableRow>
     </TableHead>
   );

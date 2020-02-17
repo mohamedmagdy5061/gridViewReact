@@ -3,8 +3,8 @@ import { DateFormatter } from './components/gridTable/helperMethods';
 
 
 export default {
-    name: 'Rule',
-    // enableSearch: true,
+    title: 'Rules',
+    baseUrl: 'https://internal.fly365dev.com/rules/rule?page=1&orderBy=createdAt&order=desc&pageSize=50',
     attributes: [
       {
         name: 'name',
@@ -30,7 +30,7 @@ export default {
         label: 'store',
         type: 'text',
         value(row) {
-          return row && DOMAINS[row.storeId].name;
+          return row.storeId && DOMAINS[row.storeId].name;
         }
       },
       {

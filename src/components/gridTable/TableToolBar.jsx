@@ -31,7 +31,7 @@ const useToolbarStyles = makeStyles(theme => ({
 
 const TableToolBar = props => {
   const classes = useToolbarStyles();
-  const { numSelected, listModel } = props;
+  const { numSelected, listModel, gridTitle } = props;
   return (
     <Toolbar
       className={clsx(classes.root, {
@@ -53,7 +53,7 @@ const TableToolBar = props => {
           variant="h6"
           id="tableTitle"
         >
-          Rule
+          {gridTitle}
         </Typography>
       )}
 

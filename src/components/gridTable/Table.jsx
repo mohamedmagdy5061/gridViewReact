@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import Table from '@material-ui/core/Table';
+import Tables from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableContainer from '@material-ui/core/TableContainer';
@@ -8,35 +8,15 @@ import TablePagination from '@material-ui/core/TablePagination';
 import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
 import Checkbox from '@material-ui/core/Checkbox';
-
+import EditIcon from '@material-ui/icons/Edit';
+import VisibilityIcon from '@material-ui/icons/Visibility';
+import IconButton from '@material-ui/core/IconButton';
 import TableToolBar from './TableToolBar';
 import TableHeader from './TableHeader';
+import DataFetching from '../../service';
+import { useParams } from '@reach/router';
 
-function descendingComparator(a, b, orderBy) {
-  if (b[orderBy] < a[orderBy]) {
-    return -1;
-  }
-  if (b[orderBy] > a[orderBy]) {
-    return 1;
-  }
-  return 0;
-}
-
-function getComparator(order, orderBy) {
-  return order === 'desc'
-    ? (a, b) => descendingComparator(a, b, orderBy)
-    : (a, b) => -descendingComparator(a, b, orderBy);
-}
-
-function stableSort(array, comparator) {
-  const stabilizedThis = array.map((el, index) => [el, index]);
-  stabilizedThis.sort((a, b) => {
-    const order = comparator(a[0], b[0]);
-    if (order !== 0) return order;
-    return a[1] - b[1];
-  });
-  return stabilizedThis.map(el => el[0]);
-}
+import { Router, Link, navigate } from '@reach/router';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -63,25 +43,46 @@ const useStyles = makeStyles(theme => ({
   },
   container: {
     maxHeight: 740
+  },
+  pagination: {
+    display: 'flex',
+    padding: ' 0px 16px',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    fontSize: '0.875rem',
+    fontWeight: 400
   }
 }));
 
-export default props => {
+function Table(props) {
   const classes = useStyles();
-  const [order, setOrder] = React.useState('asc');
-  const [orderBy, setOrderBy] = React.useState('name');
-  const [selected, setSelected] = React.useState([]);
-  const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
-
-  const { listModel, tableBodyDataFetched } = props;
+  const [order, setOrder] = useState('asc');
+  const [orderBy, setOrderBy] = useState('createdAt');
+  const [selected, setSelected] = useState([]);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const {
+    listModel,
+    tableBodyDataFetched,
+    gridTitle,
+    dependedData,
+    getComparator,
+    stableSort,
+    queryParams
+  } = props;
   const rows = tableBodyDataFetched.data || [];
-  console.log(tableBodyDataFetched, 'console.log');
+  const { handleNewRequest } = DataFetching();
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
+    queryParams['page'] = page;
+    queryParams['orderBy'] = property;
+    queryParams['order'] = isAsc ? 'desc' : 'asc';
+    queryParams['pageSize'] = rowsPerPage;
+    console.log(isAsc, property, queryParams, 'isAsc,property, queryParams');
+    handleNewRequest(listModel.baseUrl, queryParams);
   };
 
   const handleSelectAllClick = event => {
@@ -112,30 +113,38 @@ export default props => {
           selected.slice(selectedIndex + 1)
         );
       }
-
+      console.log(newSelected);
       setSelected(newSelected);
     }
   };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
+    queryParams['page'] = page;
+    queryParams['orderBy'] = orderBy;
+    queryParams['order'] = order;
+    queryParams['pageSize'] = rowsPerPage;
+    console.log(listModel.baseUrl, queryParams)
+    handleNewRequest(listModel.baseUrl, queryParams);
   };
 
   const handleChangeRowsPerPage = event => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+    setRowsPerPage(()=>parseInt(event.target.value, 10));
+    console.log(event.target.value,rowsPerPage,'event.target.value')
   };
 
   const isSelected = id => selected.indexOf(id) !== -1;
 
-  // const emptyRows = rowsPerPage - Math.min(rowsPerPage, rows.length - page * rowsPerPage);
-
   return (
     <div className={classes.root}>
       <Paper className={classes.paper}>
-        <TableToolBar listModel={listModel}  numSelected={selected.length} />
+        <TableToolBar
+          listModel={listModel}
+          gridTitle={gridTitle}
+          numSelected={selected.length}
+        />
         <TableContainer className={classes.container}>
-          <Table
+          <Tables
             className={classes.table}
             aria-labelledby="tableTitle"
             aria-label="enhanced table sticky table"
@@ -163,7 +172,7 @@ export default props => {
                     return (
                       <TableRow
                         hover
-                        onClick={event => handleClick(event, row.id)}
+                        // onClick={event => handleClick(event, row.id)}
                         tabIndex={-1}
                         key={row.name}
                         role="checkbox"
@@ -175,51 +184,91 @@ export default props => {
                             <Checkbox
                               checked={isItemSelected}
                               inputProps={{ 'aria-labelledby': labelId }}
+                              onClick={event => handleClick(event, row.id)}
                             />
                           </TableCell>
                         )}
                         {listModel.attributes.map((headCell, index) => (
                           <TableCell key={index}>
-                            {headCell.value
-                              ? headCell.value(row)
-                              : row[headCell.name]}{' '}
+                            {headCell.type === 'text' &&
+                              !headCell.value &&
+                              row[headCell.name]}
+
+                            {headCell.type === 'select' &&
+                              dependedData &&
+                              dependedData[row[headCell.name]]}
+
+                            {headCell.value && headCell.value(row)}
+
+                            {/* {JSON.stringify(headCell, null, 2) } */}
                           </TableCell>
                         ))}
+                        {listModel.actions.isUpdate && (
+                          <TableCell padding="checkbox">
+                            <IconButton
+                              aria-label="filter list"
+                              onClick={async () =>
+                                await navigate(
+                                  `${listModel.baseRoute}/update/${row.id}`
+                                )
+                              }
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </TableCell>
+                        )}
+                        {listModel.actions.isView && (
+                          <TableCell padding="checkbox">
+                            <IconButton
+                              aria-label="filter list"
+                              // onClick={async ()=>console.log(props.location)}
+                              onClick={async () =>
+                                await navigate(
+                                  `${listModel.baseRoute}/view/${row.id}`
+                                )
+                              }
+                            >
+                              <VisibilityIcon />
+                            </IconButton>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}
               </TableBody>
-            ) : (
-              <TableBody>
-                <TableRow>
-                  <TableCell
-                    align="center"
-                    colSpan={
-                      listModel.actions.isSelect
-                        ? listModel.attributes.length + 1
-                        : listModel.attributes.length
-                    }
-                  >
-                    {' '}
-                    No Data Found
-                  </TableCell>{' '}
-                </TableRow>{' '}
-              </TableBody>
-            )}
-          </Table>
+            ) : null
+            // <TableBody>
+            //   <TableRow>
+            //     <TableCell
+            //       align="center"
+            //       colSpan={
+            //         listModel.actions.isSelect
+            //           ? listModel.attributes.length + 1
+            //           : listModel.attributes.length
+            //       }
+            //     >
+            //       {' '}
+            //       No Data Found
+            //     </TableCell>{' '}
+            //   </TableRow>{' '}
+            // </TableBody>
+            }
+          </Tables>
         </TableContainer>
         {listModel.actions.isPagination && (
-          <TablePagination
-            rowsPerPageOptions={[10, 25, 50]}
-            component="div"
-            count={rows.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onChangePage={handleChangePage}
-            onChangeRowsPerPage={handleChangeRowsPerPage}
-          />
+            <TablePagination
+              rowsPerPageOptions={[10, 25, 50]}
+              component="div"
+              count={tableBodyDataFetched.total}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onChangePage={handleChangePage}
+              onChangeRowsPerPage={handleChangeRowsPerPage}
+            />
         )}
       </Paper>
     </div>
   );
-};
+}
+
+export default Table;
