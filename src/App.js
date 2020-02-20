@@ -9,6 +9,20 @@ import { Router, Link } from '@reach/router';
 
 import './App.css';
 
+
+const  AirlinesUpdate = () => (
+  <div>
+    <h1> update Airlines </h1>
+    <Link to={listModelAirlines.baseRoute}>Airlines List</Link>
+  </div>
+)
+
+const AirlinesView = () =>(
+  <div>
+    <h1>View Airlines </h1>
+    <Link to={listModelAirlines.baseRoute} >Airlines List</Link>
+  </div>
+)
 function App() {
   return (
     <div className="App">
@@ -22,23 +36,11 @@ function App() {
           gridTitle={listModelAirlines.title}
         />
 
-        <GridViewTable
-          path={`${listModelAirlines.baseRoute}/update/:id`}
-          baseUrl={listModelAirlines.baseUrl}
-          baseRoute={listModelAirlines.baseRoute}
-          listModel={listModelAirlines}
-          requestBasePath="/airline/home"
-          gridTitle={listModelAirlines.title}
-        />
+        <AirlinesUpdate
+          path={`${listModelAirlines.baseRoute}/update/:id`}/>
 
-        <GridViewTable
-          path={`${listModelAirlines.baseRoute}/view/:id`}
-          baseUrl={listModelAirlines.baseUrl}
-          baseRoute={listModelAirlines.baseRoute}
-          listModel={listModelAirlines}
-          requestBasePath="/airline/home"
-          gridTitle={listModelAirlines.title}
-        />
+        <AirlinesView
+          path={`${listModelAirlines.baseRoute}/view/:id`}/>
       </Router>
 
       {/* <GridViewTable 

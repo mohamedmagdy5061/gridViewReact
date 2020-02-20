@@ -31,7 +31,7 @@ const useToolbarStyles = makeStyles(theme => ({
 
 const TableToolBar = props => {
   const classes = useToolbarStyles();
-  const { numSelected, listModel, gridTitle } = props;
+  const { numSelected, listModel, gridTitle, handleDelete } = props;
   return (
     <Toolbar
       className={clsx(classes.root, {
@@ -60,7 +60,7 @@ const TableToolBar = props => {
       {numSelected > 0
         ? listModel.actions.isDelete && (
             <Tooltip title="Delete">
-              <IconButton aria-label="delete">
+              <IconButton onClick={handleDelete} aria-label="delete">
                 <DeleteIcon />
               </IconButton>
             </Tooltip>

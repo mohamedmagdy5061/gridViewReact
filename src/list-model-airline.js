@@ -4,6 +4,7 @@ export default {
   title: 'Airlines',
   baseUrl:'https://internal.fly365dev.com/cms/airline/home',
   baseRoute:'/air-data/airline',
+  // baseRoute:'airline/home',
   attributes: [
     {
       name: 'name',
@@ -55,7 +56,7 @@ export default {
     isView: true,
     isDelete: true,
     isUpdate: true,
-    isSelect: false,
+    isSelect: true,
     isPagination: true
   },
   permissions: {

@@ -22,11 +22,20 @@ export default function DataFetching(url, params) {
     fetchData();
   }, [url,params]);
 
-  const handleNewRequest = async (url, params) => {
-    const result = await $axios(url, { params });
-    setData(result.data);
-    console.log(result.data, 'ddresultdddd<><><><><>< service');
-  };
-
-  return { isLoading, data, isError, handleNewRequest };
+  return { isLoading, data, isError };
 }
+
+
+export function DeleteData(url, id) {
+  $axios
+    .delete(url + "/" + id)
+    .then(() => {
+      console.log('Deleted Successfully')
+    })
+    .catch(e => {
+      console.log('error')
+    });
+}
+
+
+

@@ -13,10 +13,16 @@ import VisibilityIcon from '@material-ui/icons/Visibility';
 import IconButton from '@material-ui/core/IconButton';
 import TableToolBar from './TableToolBar';
 import TableHeader from './TableHeader';
-import DataFetching from '../../service';
 import { useParams } from '@reach/router';
+import { navigate } from '@reach/router';
+import { DeleteData } from '../../service';
 
-import { Router, Link, navigate } from '@reach/router';
+// // import { MemoryRouter as Router } from 'react-router';
+// // import { Link } from 'react-router-dom';
+// import { Router, Link } from '@reach/router';
+
+// import Pagination from '@material-ui/lab/Pagination';
+// import { PaginationItem } from '@material-ui/lab';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -56,33 +62,40 @@ const useStyles = makeStyles(theme => ({
 
 function Table(props) {
   const classes = useStyles();
-  const [order, setOrder] = useState('asc');
+  const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('createdAt');
   const [selected, setSelected] = useState([]);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  let [rows, setRows] = useState([]);
   const {
     listModel,
     tableBodyDataFetched,
     gridTitle,
     dependedData,
-    getComparator,
-    stableSort,
-    queryParams
+    // getComparator,
+    // stableSort,
+    queryParams,
+    setQueryParams
   } = props;
-  const rows = tableBodyDataFetched.data || [];
-  const { handleNewRequest } = DataFetching();
+  // let rows = tableBodyDataFetched.data || [];
+
+  useEffect(() => {
+    console.log(tableBodyDataFetched.data, 'rows from table');
+    if (tableBodyDataFetched.data ) {
+      setRows(tableBodyDataFetched.data)
+    }
+  }, [tableBodyDataFetched]);
 
   const handleRequestSort = (event, property) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
+    const isAsc = orderBy === property && order === 'desc';
+    setOrder(isAsc ? 'asc' : 'desc');
     setOrderBy(property);
-    queryParams['page'] = page;
-    queryParams['orderBy'] = property;
-    queryParams['order'] = isAsc ? 'desc' : 'asc';
-    queryParams['pageSize'] = rowsPerPage;
-    console.log(isAsc, property, queryParams, 'isAsc,property, queryParams');
-    handleNewRequest(listModel.baseUrl, queryParams);
+    setQueryParams({
+      ...queryParams,
+      orderBy: property,
+      order: isAsc ? 'asc' : 'desc'
+    });
   };
 
   const handleSelectAllClick = event => {
@@ -119,18 +132,20 @@ function Table(props) {
   };
 
   const handleChangePage = (event, newPage) => {
+    // console.log(newPage,"newPage from table pagination>>")
     setPage(newPage);
-    queryParams['page'] = page;
-    queryParams['orderBy'] = orderBy;
-    queryParams['order'] = order;
-    queryParams['pageSize'] = rowsPerPage;
-    console.log(listModel.baseUrl, queryParams)
-    handleNewRequest(listModel.baseUrl, queryParams);
+    // console.log(page,"page from table pagination")
+    setQueryParams({ ...queryParams, page: newPage });
+    rows = tableBodyDataFetched.data;
   };
 
   const handleChangeRowsPerPage = event => {
-    setRowsPerPage(()=>parseInt(event.target.value, 10));
-    console.log(event.target.value,rowsPerPage,'event.target.value')
+    setRowsPerPage(() => parseInt(event.target.value, 10));
+    setQueryParams({ ...queryParams, pageSize: event.target.value });
+  };
+
+  const handleDelete = () => {
+    DeleteData(listModel.baseUrl, selected[0]);
   };
 
   const isSelected = id => selected.indexOf(id) !== -1;
@@ -142,6 +157,7 @@ function Table(props) {
           listModel={listModel}
           gridTitle={gridTitle}
           numSelected={selected.length}
+          handleDelete={handleDelete}
         />
         <TableContainer className={classes.container}>
           <Tables
@@ -160,111 +176,90 @@ function Table(props) {
               rowCount={rows.length}
               listModel={listModel}
             />
+            <TableBody>
+              {// stableSort(rows, getComparator(order, orderBy))
+              rows.map((row, index) => {
+                const isItemSelected = isSelected(row.id);
+                const labelId = `enhanced-table-checkbox-${index}`;
 
-            {rows.length ? (
-              <TableBody>
-                {stableSort(rows, getComparator(order, orderBy))
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((row, index) => {
-                    const isItemSelected = isSelected(row.id);
-                    const labelId = `enhanced-table-checkbox-${index}`;
+                return (
+                  <TableRow
+                    hover
+                    // onClick={event => handleClick(event, row.id)}
+                    tabIndex={-1}
+                    key={row.name}
+                    role="checkbox"
+                    aria-checked={isItemSelected}
+                    selected={isItemSelected}
+                  >
+                    {listModel.actions.isSelect && (
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={isItemSelected}
+                          inputProps={{ 'aria-labelledby': labelId }}
+                          onClick={event => handleClick(event, row.id)}
+                        />
+                      </TableCell>
+                    )}
+                    {listModel.attributes.map((headCell, index) => (
+                      <TableCell key={index}>
+                        {headCell.type === 'text' &&
+                          !headCell.value &&
+                          row[headCell.name]}
 
-                    return (
-                      <TableRow
-                        hover
-                        // onClick={event => handleClick(event, row.id)}
-                        tabIndex={-1}
-                        key={row.name}
-                        role="checkbox"
-                        aria-checked={isItemSelected}
-                        selected={isItemSelected}
-                      >
-                        {listModel.actions.isSelect && (
-                          <TableCell padding="checkbox">
-                            <Checkbox
-                              checked={isItemSelected}
-                              inputProps={{ 'aria-labelledby': labelId }}
-                              onClick={event => handleClick(event, row.id)}
-                            />
-                          </TableCell>
-                        )}
-                        {listModel.attributes.map((headCell, index) => (
-                          <TableCell key={index}>
-                            {headCell.type === 'text' &&
-                              !headCell.value &&
-                              row[headCell.name]}
+                        {headCell.type === 'select' &&
+                          dependedData &&
+                          dependedData[row[headCell.name]]}
 
-                            {headCell.type === 'select' &&
-                              dependedData &&
-                              dependedData[row[headCell.name]]}
+                        {headCell.value && headCell.value(row)}
 
-                            {headCell.value && headCell.value(row)}
-
-                            {/* {JSON.stringify(headCell, null, 2) } */}
-                          </TableCell>
-                        ))}
-                        {listModel.actions.isUpdate && (
-                          <TableCell padding="checkbox">
-                            <IconButton
-                              aria-label="filter list"
-                              onClick={async () =>
-                                await navigate(
-                                  `${listModel.baseRoute}/update/${row.id}`
-                                )
-                              }
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </TableCell>
-                        )}
-                        {listModel.actions.isView && (
-                          <TableCell padding="checkbox">
-                            <IconButton
-                              aria-label="filter list"
-                              // onClick={async ()=>console.log(props.location)}
-                              onClick={async () =>
-                                await navigate(
-                                  `${listModel.baseRoute}/view/${row.id}`
-                                )
-                              }
-                            >
-                              <VisibilityIcon />
-                            </IconButton>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
-            ) : null
-            // <TableBody>
-            //   <TableRow>
-            //     <TableCell
-            //       align="center"
-            //       colSpan={
-            //         listModel.actions.isSelect
-            //           ? listModel.attributes.length + 1
-            //           : listModel.attributes.length
-            //       }
-            //     >
-            //       {' '}
-            //       No Data Found
-            //     </TableCell>{' '}
-            //   </TableRow>{' '}
-            // </TableBody>
-            }
+                        {/* {JSON.stringify(headCell, null, 2) } */}
+                      </TableCell>
+                    ))}
+                    {listModel.actions.isUpdate && (
+                      <TableCell padding="checkbox">
+                        <IconButton
+                          aria-label="filter list"
+                          onClick={async () =>
+                            await navigate(
+                              `${listModel.baseRoute}/update/${row.id}`
+                            )
+                          }
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </TableCell>
+                    )}
+                    {listModel.actions.isView && (
+                      <TableCell padding="checkbox">
+                        <IconButton
+                          aria-label="filter list"
+                          onClick={async () =>
+                            await navigate(
+                              `${listModel.baseRoute}/view/${row.id}`
+                            )
+                          }
+                        >
+                          <VisibilityIcon />
+                        </IconButton>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
           </Tables>
         </TableContainer>
         {listModel.actions.isPagination && (
-            <TablePagination
-              rowsPerPageOptions={[10, 25, 50]}
-              component="div"
-              count={tableBodyDataFetched.total}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onChangePage={handleChangePage}
-              onChangeRowsPerPage={handleChangeRowsPerPage}
-            />
+          <TablePagination
+            rowsPerPageOptions={[10, 25, 50, 100]}
+            component="div"
+            count={tableBodyDataFetched.total||0}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onChangePage={handleChangePage}
+            onChangeRowsPerPage={handleChangeRowsPerPage}
+          />
         )}
       </Paper>
     </div>
